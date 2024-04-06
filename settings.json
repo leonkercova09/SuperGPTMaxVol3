@@ -1,0 +1,5 @@
+import os
+openai_api_key = os.getenv('OPENAI_API_KEY', 'default_api_key')
+temperature = float(os.getenv('TEMPERATURE', '0.7'))
+top_p = float(os.getenv('TOP_P', '1.0'))
+model = os.getenv('MODEL', 'text-davinci-003')
