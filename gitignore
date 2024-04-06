@@ -1,0 +1,7 @@
+# .gitignore content
+venv/
+*.pyc
+.DS_Store
+__pycache__/
+settings.json  # If you used it initially
+settings.py  # If it contains defaults or local dev configs
