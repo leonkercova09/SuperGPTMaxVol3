@@ -1,34 +1,24 @@
-import os
-import openai
 import streamlit as st
+import openai
 import blog_posts
-import google_serp
 import tokens_count
-import prompts
 
-# Load configurations from environment variables or use default values
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-TEMPERATURE = float(os.getenv('TEMPERATURE', '0.7'))
-TOP_P = float(os.getenv('TOP_P', '1.0'))
-MODEL = os.getenv('MODEL', 'text-davinci-003')
-SHOW_TOKEN_COST = os.getenv('SHOW_TOKEN_COST', 'True') == 'True'
+# Load the OpenAI API key from Streamlit secrets
+openai.api_key = st.secrets["openai_api_key"]
 
-# Set OpenAI API Key
-openai.api_key = OPENAI_API_KEY
-
-# Initialize Streamlit UI components
 st.title("ChatGPT Max 3.0 🚀")
 
 # Sidebar settings for Streamlit UI
 st.sidebar.header("Settings")
-temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.0, value=TEMPERATURE)
-top_p = st.sidebar.slider("Top P", min_value=0.0, max_value=1.0, value=TOP_P)
+temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7)
+top_p = st.sidebar.slider("Top P", min_value=0.0, max_value=1.0, value=1.0)
 model_selection = st.sidebar.selectbox("Model", ["gpt-3.5-turbo", "gpt-4", "text-davinci-003"], index=2)
 
-# Handling chat input and responses
+# Initialize or clear chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Display previous messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -39,45 +29,38 @@ if prompt:
     if prompt.lower() == "/reset":
         st.session_state.messages = []
     else:
-        # Processing the chat input based on specific commands
-        # This is a simplified example; you'll need to expand it based on your actual functionalities.
-        
         st.session_state.messages.append({"role": "user", "content": prompt})
         
-        # Example of handling a summarization request
+        # Example: Summarize a blog post
         if prompt.lower().startswith("/summarize "):
             blog_url = prompt[11:]
-            summary_prompt = blog_posts.get_blog_summary_prompt(blog_url)
-            # Note: Implement get_blog_summary_prompt function in blog_posts.py as per your requirement
+            summary_prompt = blog_posts.get_blog_summary_prompt(blog_url)  # Assume implementation in blog_posts.py
             
-            # OpenAI GPT call for summarization
             response = openai.Completion.create(
-                engine=MODEL,
+                engine=model_selection,
                 prompt=summary_prompt,
-                temperature=TEMPERATURE,
-                top_p=TOP_P,
-                max_tokens=150  # Adjust as per your requirement
+                temperature=temperature,
+                top_p=top_p,
+                max_tokens=150
             )
             summary = response.choices[0].text.strip()
             st.session_state.messages.append({"role": "assistant", "content": summary})
         
-        # Add more elif blocks for other functionalities like /rewrite, /google, etc.
-        
-        # Example for generic response
+        # Generic response for other prompts
         else:
             response = openai.Completion.create(
                 engine=model_selection,
                 prompt=prompt,
-                temperature=TEMPERATURE,
-                top_p=TOP_P,
+                temperature=temperature,
+                top_p=top_p,
                 max_tokens=150
             )
             reply = response.choices[0].text.strip()
             st.session_state.messages.append({"role": "assistant", "content": reply})
         
-        # Optionally, display token usage and costs if SHOW_TOKEN_COST is True
-        if SHOW_TOKEN_COST:
-            token_usage = tokens_count.count_tokens(prompt + reply, MODEL)  # Implement count_tokens in tokens_count.py as needed
-            cost = tokens_count.estimate_input_cost_optimized(MODEL, token_usage)  # Implement estimate_input_cost_optimized as needed
-            st.sidebar.markdown(f"**Estimated Token Usage:** {token_usage} tokens")
+        # Display token usage and cost (implementation needed in tokens_count.py)
+        if st.sidebar.checkbox("Show token cost"):
+            token_usage = tokens_count.count_tokens(prompt + reply)  # Implement this function in tokens_count.py
+            cost = tokens_count.estimate_cost(token_usage)  # Implement this function in tokens_count.py
+            st.sidebar.markdown(f"**Token Usage:** {token_usage} tokens")
             st.sidebar.markdown(f"**Estimated Cost:** ${cost:.6f}")
